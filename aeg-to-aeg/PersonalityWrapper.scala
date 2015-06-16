@@ -4,7 +4,7 @@ import Chisel._
 import ConveyInterfaces._
 
 class PersonalityWrapper() extends Module {
-  val io = new TopWrapperInterface()
+  val io = new TopWrapperInterface(numMemPorts = 1)
 
   io.renameSignals()
 
@@ -40,7 +40,18 @@ class PersonalityWrapper() extends Module {
   persDispatch.aeg.cmd.valid := io.dispRegRead || io.dispRegWrite
   persCSR.cmd.valid := io.csrRdValid || io.csrWrValid
   // stall = !ready for the instr dispatch
-  io.disp_stall := !persDispatch.instr.ready
+  io.dispStall := !persDispatch.instr.ready
 
-  // TODO add memory port connections
+  // TODO add proper memory port connections
+  // TODO only do this when no memory ports are desired (set count to 1)
+  io.mcReqValid := UInt(0)
+  io.mcReqRtnCtl := UInt(0)
+  io.mcReqData := UInt(0)
+  io.mcReqAddr := UInt(0)
+  io.mcReqSize := UInt(0)
+  io.mcReqCmd := UInt(0)
+  io.mcReqSCmd := UInt(0)
+  io.mcResStall := UInt(0)
+  io.mcReqFlush := UInt(0)
+
 }

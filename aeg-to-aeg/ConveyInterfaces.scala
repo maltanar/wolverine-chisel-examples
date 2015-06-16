@@ -42,7 +42,7 @@ class DispatchSlaveIF() extends Bundle {
   override def clone = { new DispatchSlaveIF().asInstanceOf[this.type] }
 }
 
-class TopWrapperInterface() extends Bundle {
+class TopWrapperInterface(numMemPorts: Int) extends Bundle {
   // dispatch interface
   val dispInstValid = Bool(INPUT)
   val dispInstData  = UInt(INPUT, width = 5)
@@ -55,8 +55,27 @@ class TopWrapperInterface() extends Bundle {
   val dispIdle      = Bool(OUTPUT)
   val dispRtnValid  = Bool(OUTPUT)
   val dispRtnData   = UInt(OUTPUT, width = 64)
-  val disp_stall    = Bool(OUTPUT)
-  // TODO add memory controller ports here
+  val dispStall     = Bool(OUTPUT)
+  // memory controller interface
+  // request
+  val mcReqValid    = UInt(OUTPUT, width = numMemPorts)
+  val mcReqRtnCtl   = UInt(OUTPUT, width = 32*numMemPorts)
+  val mcReqData     = UInt(OUTPUT, width = 64*numMemPorts)
+  val mcReqAddr     = UInt(OUTPUT, width = 48*numMemPorts)
+  val mcReqSize     = UInt(OUTPUT, width = 2*numMemPorts)
+  val mcReqCmd      = UInt(OUTPUT, width = 3*numMemPorts)
+  val mcReqSCmd     = UInt(OUTPUT, width = 4*numMemPorts)
+  val mcReqStall    = UInt(INPUT, width = numMemPorts)
+  // response
+  val mcResValid    = UInt(INPUT, width = numMemPorts)
+  val mcResCmd      = UInt(INPUT, width = 3*numMemPorts)
+  val mcResSCmd     = UInt(INPUT, width = 4*numMemPorts)
+  val mcResData     = UInt(INPUT, width = 64*numMemPorts)
+  val mcResRtnCtl   = UInt(INPUT, width = 32*numMemPorts)
+  val mcResStall    = UInt(OUTPUT, width = numMemPorts)
+  // flush
+  val mcReqFlush    = UInt(OUTPUT, width = numMemPorts)
+  val mcReqFlushOK  = UInt(INPUT, width = numMemPorts)
   // control-status register interface
   val csrWrValid      = Bool(INPUT)
   val csrRdValid      = Bool(INPUT)
@@ -80,7 +99,23 @@ class TopWrapperInterface() extends Bundle {
     dispIdle.setName("disp_idle")
     dispRtnValid.setName("disp_rtn_data_vld")
     dispRtnData.setName("disp_rtn_data")
-    disp_stall.setName("disp_stall")
+    dispStall.setName("disp_stall")
+    mcReqValid.setName("mc_rq_vld")
+    mcReqRtnCtl.setName("mc_rq_rtnctl")
+    mcReqData.setName("mc_rq_data")
+    mcReqAddr.setName("mc_rq_vadr")
+    mcReqSize.setName("mc_rq_size")
+    mcReqCmd.setName("mc_rq_cmd")
+    mcReqSCmd.setName("mc_rq_scmd")
+    mcReqStall.setName("mc_rq_stall")
+    mcResValid.setName("mc_rs_vld")
+    mcResCmd.setName("mc_rs_cmd")
+    mcResSCmd.setName("mc_rs_scmd")
+    mcResData.setName("mc_rs_data")
+    mcResRtnCtl.setName("mc_rs_rtnctl")
+    mcResStall.setName("mc_rs_stall")
+    mcReqFlush.setName("mc_rq_flush")
+    mcReqFlushOK.setName("mc_rs_flush_cmplt")
     csrWrValid.setName("csr_wr_vld")
     csrRdValid.setName("csr_rd_vld")
     csrAddr.setName("csr_address")

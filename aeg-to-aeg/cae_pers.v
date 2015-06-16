@@ -77,17 +77,6 @@ module cae_pers #(
 
 `include "pdk_fpga_param.vh"
 
-    // plug MC outputs for now
-    assign mc_rq_vld = 'd0;
-    assign mc_rq_cmd = 'd0;
-    assign mc_rq_scmd = 'd0;
-    assign mc_rq_data = 'd0;
-    assign mc_rq_vadr = 'd0;
-    assign mc_rq_rtnctl = 'd0;
-    assign mc_rq_size = 'd0;
-    assign mc_rq_flush = 'd0;
-    assign mc_rs_stall = 'd0;
-
    PersonalityWrapper pers(
     .clk(clk),
     .reset(i_reset),
@@ -103,6 +92,22 @@ module cae_pers #(
     .disp_rtn_data_vld(disp_rtn_data_vld),
     .disp_rtn_data(disp_rtn_data),
     .disp_stall(disp_stall),
+    .mc_rq_vld(mc_rq_vld),
+    .mc_rq_rtnctl(mc_rq_rtnctl),
+    .mc_rq_data(mc_rq_data),
+    .mc_rq_vadr(mc_rq_vadr),
+    .mc_rq_size(mc_rq_size),
+    .mc_rq_cmd(mc_rq_cmd),
+    .mc_rq_scmd(mc_rq_scmd),
+    .mc_rq_stall(mc_rq_stall),
+    .mc_rs_vld(mc_rs_vld),
+    .mc_rs_cmd(mc_rs_cmd),
+    .mc_rs_scmd(mc_rs_scmd),
+    .mc_rs_data(mc_rs_data),
+    .mc_rs_rtnctl(mc_rs_rtnctl),
+    .mc_rs_stall(mc_rs_stall),
+    .mc_rq_flush(mc_rq_flush),
+    .mc_rs_flush_cmplt(mc_rs_flush_cmplt),
     .csr_wr_vld(csr_wr_vld),
     .csr_rd_vld(csr_rd_vld),
     .csr_address(csr_address),
