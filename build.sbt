@@ -6,6 +6,7 @@ libraryDependencies += "edu.berkeley.cs" %% "chisel" % "latest.release"
 
 unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
   Seq(
-    base / "../common"
+    base / "common",
+    base / "aeg-to-aeg"
   )
 }
