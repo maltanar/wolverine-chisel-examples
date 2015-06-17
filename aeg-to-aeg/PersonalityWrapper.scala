@@ -3,8 +3,11 @@ package AEGtoAEG
 import Chisel._
 import ConveyInterfaces._
 
-class PersonalityWrapper() extends Module {
-  val io = new TopWrapperInterface(numMemPorts = 1)
+class PersonalityWrapper(numMemPorts: Int) extends Module {
+  // the Convey wrapper itself always expects at least one memory port
+  // if no mem ports are desired, we still create one and drive outputs to 0
+  val numCalculatedMemPorts = if(numMemPorts == 0) 1 else numMemPorts
+  val io = new TopWrapperInterface(numCalculatedMemPorts)
 
   io.renameSignals()
 
@@ -42,16 +45,19 @@ class PersonalityWrapper() extends Module {
   // stall = !ready for the instr dispatch
   io.dispStall := !persDispatch.instr.ready
 
+  // handle the no memory ports case by driving a single port to zero
+  if (numMemPorts == 0) {
+    println("====> Zero memory ports specified - instantiating one and driving to zero")
+    println("====> Remember to set NUM_MC_PORTS=1 in cae_pers.v")
+    io.mcReqValid := UInt(0)
+    io.mcReqRtnCtl := UInt(0)
+    io.mcReqData := UInt(0)
+    io.mcReqAddr := UInt(0)
+    io.mcReqSize := UInt(0)
+    io.mcReqCmd := UInt(0)
+    io.mcReqSCmd := UInt(0)
+    io.mcResStall := UInt(0)
+    io.mcReqFlush := UInt(0)
+  }
   // TODO add proper memory port connections
-  // TODO only do this when no memory ports are desired (set count to 1)
-  io.mcReqValid := UInt(0)
-  io.mcReqRtnCtl := UInt(0)
-  io.mcReqData := UInt(0)
-  io.mcReqAddr := UInt(0)
-  io.mcReqSize := UInt(0)
-  io.mcReqCmd := UInt(0)
-  io.mcReqSCmd := UInt(0)
-  io.mcResStall := UInt(0)
-  io.mcReqFlush := UInt(0)
-
 }
