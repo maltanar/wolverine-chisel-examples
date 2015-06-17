@@ -1,37 +1,39 @@
 import Chisel._
 import ConveyInterfaces._
 
+class MemSumPipeIF() extends Bundle {
+  val start = Bool(INPUT)               // start signal
+  val done  = Bool(OUTPUT)              // finished
+  val base = UInt(INPUT, width = 64)    // base pointer
+  val count = UInt(INPUT, width = 64)   // number of elements
+  val sum   = UInt(OUTPUT, width = 64)  // returned sum
+  val mem = new MemMasterIF()           // memory port
+}
+
 class MemSumPipe() extends Module {
-  val io = new Bundle {
-    val start = Bool(INPUT)               // start signal
-    val done  = Bool(OUTPUT)              // finished
-    val base = UInt(INPUT, width = 48)    // base pointer
-    val count = UInt(INPUT, width = 64)   // number of elements
-    val sum   = UInt(OUTPUT, width = 64)  // returned sum
-    val mem = new MemMasterIF()           // memory port
-  }
+  val io = new MemSumPipeIF()
 
   // internal registers
   val regSum = Reg(init = UInt(0, 64))
-  val regReqPtr = Reg(init = UInt(0, 48))
+  val regReqPtr = Reg(init = UInt(0, 64))
   val regReqsLeft = Reg(init = UInt(0, 64))
 
   // default outputs -- specific
   io.done := Bool(false)
   io.sum := regSum
   // default outputs -- memory requests
-  op.mem.req.valid := Bool(false)
-  op.mem.req.bits.rtnCtl := UInt(0)
-  op.mem.req.bits.writeData := UInt(0)
-  op.mem.req.bits.addr := regReqPtr
+  io.mem.req.valid := Bool(false)
+  io.mem.req.bits.rtnCtl := UInt(0)
+  io.mem.req.bits.writeData := UInt(0)
+  io.mem.req.bits.addr := regReqPtr
   // size/cmd/scmd values for 8-byte reads
   // TODO test 64-byte reads for more BW
-  op.mem.req.bits.size := UInt(3)
-  op.mem.req.bits.cmd := UInt(1)
-  op.mem.req.bits.scmd := UInt(0)
+  io.mem.req.bits.size := UInt(3)
+  io.mem.req.bits.cmd := UInt(1)
+  io.mem.req.bits.scmd := UInt(0)
   // default outputs -- memory responses and flushing
-  op.mem.rsp.ready := Bool(false)
-  op.mem.flushReq := Bool(false)
+  io.mem.rsp.ready := Bool(false)
+  io.mem.flushReq := Bool(false)
 
   // request generation logic
   val sReqIdle :: sReqWait :: sReqIssue :: sReqDone :: Nil = Enum(UInt(), 4)
@@ -96,7 +98,7 @@ class MemSumPipe() extends Module {
         // check for read data
         .elsewhen ( io.mem.rsp.valid ) {
           // update sum
-          regSum := regSum + io.mem.rsp.readData
+          regSum := regSum + io.mem.rsp.bits.readData
           // update counter
           regRspsLeft := regRspsLeft - UInt(1)
         }
