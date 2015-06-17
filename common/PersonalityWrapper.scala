@@ -1,9 +1,7 @@
-package AEGtoAEG
-
 import Chisel._
 import ConveyInterfaces._
 
-class PersonalityWrapper(numMemPorts: Int) extends Module {
+class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends Module {
   // the Convey wrapper itself always expects at least one memory port
   // if no mem ports are desired, we still create one and drive outputs to 0
   val numCalculatedMemPorts = if(numMemPorts == 0) 1 else numMemPorts
@@ -12,7 +10,7 @@ class PersonalityWrapper(numMemPorts: Int) extends Module {
   io.renameSignals()
 
   // TODO can we directly parametrize this?
-  val pers = Module(new AEGtoAEG(numMemPorts))
+  val pers = Module(instFxn())
   val persDispatch = pers.io.disp
   val persCSR = pers.io.csr
   val persMemPorts = pers.io.mem

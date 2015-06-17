@@ -76,6 +76,16 @@ class MemMasterIF() extends Bundle {
   override def clone = { new MemMasterIF().asInstanceOf[this.type] }
 }
 
+// interface for a Convey personality (for use in Chisel)
+class PersonalityIF(numMemPorts: Int) extends Bundle {
+  val disp = new DispatchSlaveIF()
+  val csr  = new RegFileSlaveIF(16, 64)
+  val mem  = Vec.fill(numMemPorts) { new MemMasterIF() }
+
+  override def clone = { new PersonalityIF(numMemPorts).asInstanceOf[this.type] }
+}
+
+// wrapper for Convey Verilog personality
 class TopWrapperInterface(numMemPorts: Int) extends Bundle {
   // dispatch interface
   val dispInstValid = Bool(INPUT)

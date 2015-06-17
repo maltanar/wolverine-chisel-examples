@@ -1,5 +1,3 @@
-package AEGtoAEG
-
 import Chisel._
 import ConveyInterfaces._
 
