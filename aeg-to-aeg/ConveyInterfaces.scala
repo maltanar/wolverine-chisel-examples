@@ -50,6 +50,8 @@ class MemRequest(rtnCtlBits: Int, addrBits: Int, dataBits: Int) extends Bundle {
   val size        = UInt(width = 2)
   val cmd         = UInt(width = 3)
   val scmd        = UInt(width = 4)
+
+  override def clone = { new MemRequest(rtnCtlBits, addrBits, dataBits).asInstanceOf[this.type] }
 }
 
 // response bundle for return read data or write completes (?)
@@ -58,6 +60,8 @@ class MemResponse(rtnCtlBits: Int, dataBits: Int) extends Bundle {
   val readData    = UInt(width = dataBits)
   val cmd         = UInt(width = 3)
   val scmd        = UInt(width = 4)
+
+  override def clone = { new MemResponse(rtnCtlBits, dataBits).asInstanceOf[this.type] }
 }
 
 // memory port master interface
@@ -68,6 +72,8 @@ class MemMasterIF() extends Bundle {
   val rsp         = Decoupled(new MemResponse(32, 64)).flip
   val flushReq    = Bool(OUTPUT)
   val flushOK     = Bool(INPUT)
+
+  override def clone = { new MemMasterIF().asInstanceOf[this.type] }
 }
 
 class TopWrapperInterface(numMemPorts: Int) extends Bundle {
@@ -103,7 +109,7 @@ class TopWrapperInterface(numMemPorts: Int) extends Bundle {
   val mcResStall    = UInt(OUTPUT, width = numMemPorts)
   // flush
   val mcReqFlush    = UInt(OUTPUT, width = numMemPorts)
-  val mcReqFlushOK  = UInt(INPUT, width = numMemPorts)
+  val mcResFlushOK  = UInt(INPUT, width = numMemPorts)
   // control-status register interface
   val csrWrValid      = Bool(INPUT)
   val csrRdValid      = Bool(INPUT)
@@ -113,6 +119,8 @@ class TopWrapperInterface(numMemPorts: Int) extends Bundle {
   val csrReadData     = UInt(OUTPUT, 64)
   // misc
   val aeid            = UInt(INPUT, 4)
+
+  override def clone = { new TopWrapperInterface(numMemPorts).asInstanceOf[this.type] }
 
   // rename signals
   def renameSignals() {
@@ -143,7 +151,7 @@ class TopWrapperInterface(numMemPorts: Int) extends Bundle {
     mcResRtnCtl.setName("mc_rs_rtnctl")
     mcResStall.setName("mc_rs_stall")
     mcReqFlush.setName("mc_rq_flush")
-    mcReqFlushOK.setName("mc_rs_flush_cmplt")
+    mcResFlushOK.setName("mc_rs_flush_cmplt")
     csrWrValid.setName("csr_wr_vld")
     csrRdValid.setName("csr_rd_vld")
     csrAddr.setName("csr_address")

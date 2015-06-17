@@ -3,10 +3,13 @@ package AEGtoAEG
 import Chisel._
 import ConveyInterfaces._
 
-class AEGtoAEG() extends Module {
+// TODO define a base class for Convey personalities
+
+class AEGtoAEG(numMemPorts: Int) extends Module {
   val io = new Bundle {
     val disp = new DispatchSlaveIF()
     val csr  = new RegFileSlaveIF(16, 64)
+    val mem  = Vec.fill(numMemPorts) { new MemMasterIF() }
   }
 
   // instantiate and connect main (ops) register file
