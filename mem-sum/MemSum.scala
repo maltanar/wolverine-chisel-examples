@@ -19,6 +19,8 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   val regBase = Reg(init = UInt(0, 48))
   val regElemsPerPipe = Reg(init = UInt(0, 64))
   val regCycleCount = Reg(init = UInt(0, 64))
+  val regSum = Reg(init = UInt(0, 64))
+  val regSumIndex = Reg(init = UInt(0, 8))
 
   // instantiate the actual processing elements/pipelines
   val pipes = Vec.fill(numMemPorts) { Module(new MemSumPipe()).io }
@@ -42,7 +44,7 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
 
   // ops regfile internal write port
   regFile.io.regWrInd := UInt(2)
-  regFile.io.regWrData := pipes(0).sum // TODO sum all pipes instead
+  regFile.io.regWrData := regSum
   regFile.io.regWrEn := Bool(false)
 
   // csr regfile internal write port
@@ -50,7 +52,7 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   csrRegFile.io.regWrData := regCycleCount
   csrRegFile.io.regWrEn := Bool(false)
 
-  val sIdle :: sDispatch :: sWait :: sFinish :: Nil = Enum(UInt(), 4)
+  val sIdle :: sDispatch :: sWait :: sAccumulateSums :: sFinish :: Nil = Enum(UInt(), 5)
   val regState = Reg(init = UInt(sIdle))
 
   switch(regState) {
@@ -78,10 +80,25 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
         // activate pipes
         regPipeStart := Bool(true)
         // wait until all pipes are finished
-        when (allPipesFinished) { regState := sFinish }
+        when (allPipesFinished) {
+          regState := sAccumulateSums
+          // zero sum and sum read index registers
+          regSum := UInt(0)
+          regSumIndex := UInt(0)
+        }
         // keep cycle count for BW statistics
         regCycleCount := regCycleCount + UInt(1)
         csrRegFile.io.regWrEn := Bool(true)
+      }
+
+      is(sAccumulateSums) {
+        // go to sFinish when all pipes have been summed
+        when (regSumIndex === UInt(numMemPorts)) { regState := sFinish}
+        .otherwise {
+          // accumulate sum from next pipe otherwise
+          regSum := regSum + pipes(regSumIndex).sum
+          regSumIndex := regSumIndex + UInt(1)
+        }
       }
 
       is(sFinish) {
@@ -92,10 +109,5 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
       }
   }
 
-
-  // TODO add instruction dispatch logic
-  // TODO return result
-  // TODO add cycle counter
-  // TODO add some debug support, synthesize + test single pipe
-  // TODO global sum from several pipes + test
+  // TODO add better debug support
 }
