@@ -42,6 +42,34 @@ class DispatchSlaveIF() extends Bundle {
   override def clone = { new DispatchSlaveIF().asInstanceOf[this.type] }
 }
 
+// command (request) bundle for memory read/writes
+class MemRequest(rtnCtlBits: Int, addrBits: Int, dataBits: Int) extends Bundle {
+  val rtnCtl      = UInt(width = rtnCtlBits)
+  val writeData   = UInt(width = dataBits)
+  val addr        = UInt(width = addrBits)
+  val size        = UInt(width = 2)
+  val cmd         = UInt(width = 3)
+  val scmd        = UInt(width = 4)
+}
+
+// response bundle for return read data or write completes (?)
+class MemResponse(rtnCtlBits: Int, dataBits: Int) extends Bundle {
+  val rtnCtl      = UInt(width = rtnCtlBits)
+  val readData    = UInt(width = dataBits)
+  val cmd         = UInt(width = 3)
+  val scmd        = UInt(width = 4)
+}
+
+// memory port master interface
+class MemMasterIF() extends Bundle {
+  // note that req and rsp are defined by Convey as stall/valid interfaces
+  // (instead of ready/valid as defined here) -- needs adapter
+  val req         = Decoupled(new MemRequest(32, 48, 64))
+  val rsp         = Decoupled(new MemResponse(32, 64)).flip
+  val flushReq    = Bool(OUTPUT)
+  val flushOK     = Bool(INPUT)
+}
+
 class TopWrapperInterface(numMemPorts: Int) extends Bundle {
   // dispatch interface
   val dispInstValid = Bool(INPUT)
