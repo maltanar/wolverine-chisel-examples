@@ -1,8 +1,6 @@
 import Chisel._
 import ConveyInterfaces._
 
-// TODO define a base class for Convey personalities
-
 class AEGtoAEG(numMemPorts: Int) extends Personality(numMemPorts) {
   // I/O is defined by the base class (Personality)
 

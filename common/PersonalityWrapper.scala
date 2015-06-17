@@ -9,13 +9,12 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
 
   io.renameSignals()
 
-  // TODO can we directly parametrize this?
   val pers = Module(instFxn())
   val persDispatch = pers.io.disp
   val persCSR = pers.io.csr
   val persMemPorts = pers.io.mem
 
-  // most wrapper signals c
+  // most wrapper signals connect directly
   persDispatch.instr.valid := io.dispInstValid
   persDispatch.instr.bits := io.dispInstData
   persDispatch.aeg.cmd.bits.regID := io.dispRegID
@@ -47,7 +46,6 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
   // handle the no memory ports case by driving a single port to zero
   if (numMemPorts == 0) {
     println("====> Zero memory ports specified - instantiating one and driving to zero")
-    println("====> Remember to set NUM_MC_PORTS=1 in cae_pers.v")
     io.mcReqValid := UInt(0)
     io.mcReqRtnCtl := UInt(0)
     io.mcReqData := UInt(0)
@@ -107,4 +105,5 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
       persMemPorts(i).rsp.bits.scmd := io.mcResSCmd(4*(i+1)-1, 4*i)
     }
   }
+  println(s"====> Remember to set NUM_MC_PORTS=$numCalculatedMemPorts in cae_pers.v")
 }
