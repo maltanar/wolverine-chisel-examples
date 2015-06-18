@@ -43,8 +43,8 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   io.disp.instr.ready := Bool(false)
 
   // ops regfile internal write port
-  regFile.io.regWrInd := UInt(2)
-  regFile.io.regWrData := regSum
+  regFile.io.regWrInd := UInt(0)
+  regFile.io.regWrData := UInt(0)
   regFile.io.regWrEn := Bool(false)
 
   // csr regfile internal write port
@@ -52,7 +52,7 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   csrRegFile.io.regWrData := regCycleCount
   csrRegFile.io.regWrEn := Bool(false)
 
-  val sIdle :: sDispatch :: sWait :: sAccumulateSums :: sFinish :: Nil = Enum(UInt(), 5)
+  val sIdle :: sDispatch :: sWait :: sAccumulateSums :: sFinish :: sFinish2 :: Nil = Enum(UInt(), 6)
   val regState = Reg(init = UInt(sIdle))
 
   switch(regState) {
@@ -104,6 +104,18 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
       is(sFinish) {
         // write result to register file
         regFile.io.regWrEn := Bool(true)
+        regFile.io.regWrInd := UInt(2)
+        regFile.io.regWrData := regSum
+        regState := sFinish2
+      }
+
+      is(sFinish2) {
+        // write cycle count to register file
+        // this should normally be read thru CSR, but accessing these on the
+        // Wolverine is not properly documented
+        regFile.io.regWrEn := Bool(true)
+        regFile.io.regWrInd := UInt(3)
+        regFile.io.regWrData := regCycleCount
         // back to idle
         regState := sIdle
       }
