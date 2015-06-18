@@ -36,36 +36,32 @@ class MemSumPipe() extends Module {
   io.mem.flushReq := Bool(false)
 
   // request generation logic
-  val sReqIdle :: sReqWait :: sReqIssue :: sReqDone :: Nil = Enum(UInt(), 4)
+  val sReqIdle :: sReqIssue :: sReqDone :: Nil = Enum(UInt(), 3)
   val regReqFSMState = Reg(init = UInt(sReqIdle))
 
   switch(regReqFSMState) {
       is(sReqIdle) {
         when (io.start) {
           // start the req machine
-          regReqFSMState := sReqWait
+          regReqFSMState := sReqIssue
           // latch in parameters and initialize regs
           regReqPtr := io.base
           regReqsLeft := io.count
         }
       }
 
-      is(sReqWait) {
+      is(sReqIssue) {
         // completion check
         when (regReqsLeft === UInt(0)) { regReqFSMState := sReqDone }
-        // issue if possible
-        .elsewhen ( io.mem.req.ready ) { regReqFSMState := sReqIssue }
+        .otherwise {
+          io.mem.req.valid := Bool(true)
+          when ( io.mem.req.ready ) {
+            // update counters
+            regReqPtr := regReqPtr + UInt(8)
+            regReqsLeft := regReqsLeft - UInt(1)
+          }
+        }
         // wait in this state otherwise
-      }
-
-      is(sReqIssue) {
-        // issue request
-        io.mem.req.valid := Bool(true)
-        // update counters
-        regReqPtr := regReqPtr + UInt(8)
-        regReqsLeft := regReqsLeft - UInt(1)
-        // wait for ready again (probably too conservative, but decoupled)
-        regReqFSMState := sReqWait
       }
 
       is(sReqDone) {
