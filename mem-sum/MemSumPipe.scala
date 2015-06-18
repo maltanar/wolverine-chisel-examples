@@ -10,7 +10,7 @@ class MemSumPipeIF() extends Bundle {
   val mem = new MemMasterIF()           // memory port
 }
 
-class MemSumPipe() extends Module {
+class MemSumPipe(burstBeats: Int) extends Module {
   val io = new MemSumPipeIF()
 
   // internal registers
@@ -26,11 +26,21 @@ class MemSumPipe() extends Module {
   io.mem.req.bits.rtnCtl := UInt(0)
   io.mem.req.bits.writeData := UInt(0)
   io.mem.req.bits.addr := regReqPtr
-  // size/cmd/scmd values for 8-byte reads
-  // TODO test 64-byte reads for more BW
-  io.mem.req.bits.size := UInt(3)
-  io.mem.req.bits.cmd := UInt(1)
-  io.mem.req.bits.scmd := UInt(0)
+  if (burstBeats == 1) {
+    // size/cmd/scmd values for 8-byte reads
+    io.mem.req.bits.size := UInt(3)
+    io.mem.req.bits.cmd := UInt(1)
+    io.mem.req.bits.scmd := UInt(0)
+  } else if (burstBeats == 8) {
+    // size/cmd/scmd values for 64-byte reads
+    io.mem.req.bits.size := UInt(3)
+    io.mem.req.bits.cmd := UInt(7)
+    io.mem.req.bits.scmd := UInt(0)
+  } else {
+    println("=======================> Unsupported burst length!")
+    System.exit(1)
+  }
+
   // default outputs -- memory responses and flushing
   io.mem.rsp.ready := Bool(false)
   io.mem.flushReq := Bool(false)
@@ -62,8 +72,8 @@ class MemSumPipe() extends Module {
         // issue request
         io.mem.req.valid := Bool(true)
         // update counters
-        regReqPtr := regReqPtr + UInt(8)
-        regReqsLeft := regReqsLeft - UInt(1)
+        regReqPtr := regReqPtr + UInt(8*burstBeats)
+        regReqsLeft := regReqsLeft - UInt(burstBeats)
         // wait for ready again (probably too conservative, but decoupled)
         regReqFSMState := sReqWait
       }

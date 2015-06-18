@@ -23,7 +23,7 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   val regSumIndex = Reg(init = UInt(0, 8))
 
   // instantiate the actual processing elements/pipelines
-  val pipes = Vec.fill(numMemPorts) { Module(new MemSumPipe()).io }
+  val pipes = Vec.fill(numMemPorts) { Module(new MemSumPipe(burstBeats = 8)).io }
   val regPipeStart = Reg(init = Bool(false))
   for (i <- 0 to numMemPorts-1) {
     // connect memory port
