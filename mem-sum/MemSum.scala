@@ -31,7 +31,7 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
     pipes(i).start := regPipeStart
     // pipe init logic
     // set base ptr and count regs per pipe
-    pipes(i).base := regBase + UInt(i) * regElemsPerPipe
+    pipes(i).base := regBase + (UInt(i*8) * regElemsPerPipe)
     pipes(i).count := regElemsPerPipe
   }
   val allPipesFinished = pipes.forall( (pipe: MemSumPipeIF) => (pipe.done) )
