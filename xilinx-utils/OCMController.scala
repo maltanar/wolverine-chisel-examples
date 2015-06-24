@@ -29,10 +29,13 @@ class OCMMasterIF(writeWidth: Int, readWidth: Int, addrBits: Int) extends Bundle
 
 // slave interface is just the master interface flipped
 class OCMSlaveIF(writeWidth: Int, readWidth: Int, addrBits: Int) extends Bundle {
-    OCMMasterIF(writeWidth, readWidth, addrBits).flip
+  val addr = UInt(INPUT, width = addrBits)
+  val dataRead = UInt(OUTPUT, width = readWidth)
+  val writeEn = Bool(INPUT)
+  val dataWrite = UInt(INPUT, width = writeWidth)
 
-    override def clone =
-      { new OCMSlaveIF(writeWidth, readWidth, addrBits).asInstanceOf[this.type] }
+  override def clone =
+    { new OCMSlaveIF(writeWidth, readWidth, addrBits).asInstanceOf[this.type] }
 }
 
 // we assume the actual OCM instance is generated via vendor-provided tools
@@ -47,19 +50,23 @@ class OnChipMemory(p: OCMParameters, ocmName: String) extends BlackBox {
 
 }
 
+class OCMControllerIF(p: OCMParameters, extAddrWidth: Int) extends Bundle {
+  // control/status interface
+  val mode = UInt(INPUT, 1)
+  val start = Bool(INPUT)
+  val done = Bool(OUTPUT)
+  val baseAddr = UInt(INPUT, width = extAddrWidth)
+  // TODO support partial fill/dump by start&count registers
+  // fill/dump ports
+  val fillPort = Decoupled(UInt(width = p.writeWidth)).flip
+  val dumpPort = Decoupled(UInt(width = p.readWidth))
+  // slave ports for passthrough mode
+  val ports = Vec.fill(p.portCount) { new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
+}
+
 class OCMController(p: OCMParameters, extAddrWidth: Int) extends Module {
   val io = new Bundle {
-    // control/status interface
-    val mode = UInt(INPUT, 1)
-    val start = Bool(INPUT)
-    val done = Bool(OUTPUT)
-    val baseAddr = UInt(INPUT, width = extAddrWidth)
-    // TODO support partial fill/dump by start&count registers
-    // fill/dump ports
-    val fillPort = Decoupled(UInt(width = p.writeWidth)).flip
-    val dumpPort = Decoupled(UInt(width = p.readWidth))
-    // slave ports for passthrough mode
-    val ports = Vec.fill(p.portCount) { new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
+    val mcif = new OCMControllerIF(p, extAddrWidth)
     // master ports to connect to the OCM instance
     val toOCM = Vec.fill(p.portCount) { new OCMMasterIF(p.writeWidth, p.readWidth, p.addrWidth)}
   }
@@ -67,5 +74,21 @@ class OCMController(p: OCMParameters, extAddrWidth: Int) extends Module {
   // TODO add passthrough logic when controller is idle
   // TODO implement fill port functionality
   // TODO implement dump port functionality (remember ResultDumper)
+}
 
+class OCMAndController(p: OCMParameters, extAddrWidth: Int, ocmName: String) extends Module {
+  val io = new Bundle {
+    val mcif = new OCMControllerIF(p, extAddrWidth)
+    // TODO add support for "external ports" (not connected to the MC)
+  }
+
+  // instantiate the OCM controller
+  val ocmControllerInst = Module(new OCMController(p, extAddrWidth))
+  // instantiate the OCM
+  val ocmInst = Module(new OnChipMemory(p, ocmName))
+  // connect the interfaces
+  io.mcif <> ocmControllerInst.io.mcif
+  for (i <- 0 to p.portCount-1) {
+    ocmControllerInst.io.toOCM(i) <> ocmInst.io.ports(i)
+  }
 }
