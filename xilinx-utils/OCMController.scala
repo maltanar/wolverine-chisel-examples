@@ -91,29 +91,53 @@ class OCMController(p: OCMParameters) extends Module {
     // master port to connect to the OCM instance
     val ocm = new OCMMasterIF(p.writeWidth, p.readWidth, p.addrWidth)
   }
-  // TODO implement fill port functionality
-  // TODO implement dump port functionality (remember ResultDumper)
+  // TODO test fill port functionality
+  // TODO test dump port functionality
 
+  // use a FIFO queue to make burst reads with latency easier
+  // TODO parametrize # entires in dump queue
+  val fifoCapacity = 16
+  val regDumpValid = Reg(init = Bool(false))
+  val dumpQ = Module(new Queue(UInt(width = p.readWidth), entries = fifoCapacity))
+  // shift registers to compensate for OCM read latency (address to valid)
+  // -1 since this is already sourced from a register
+  dumpQ.io.enq.valid := ShiftRegister(in=regDumpValid, n=p.readLatency-1)
+  dumpQ.io.enq.bits := io.ocm.rsp.readData
+  dumpQ.io.deq <> io.mcif.dumpPort
+
+  // TODO use instead "programmable full" threshold on Xilinx FIFOs
+  // the 2x here is probably overly cautious, but better safe than sorry
+  // (since we don't wait before all responses are committed before checking room)
+  val hasRoom = (dumpQ.io.count < UInt((fifoCapacity-2*p.readLatency-1)))
+
+  // address register, for both reads and writes (we do only one at once)
   val regAddr = Reg(init = UInt(0, p.addrWidth))
+  // total number of words left in the dump operation
+  val regWordsLeft = Reg(init = UInt(0, p.addrWidth))
+  // # of words in the next dump burst
+  val regReqCount = Reg(init=UInt(0,4))
 
   // default outputs
   io.mcif.done := Bool(false)
   io.mcif.fillPort.ready := Bool(false)
-  io.mcif.dumpPort.valid := Bool(false)
-  io.mcif.dumpPort.bits := UInt(0)  // TODO remove for dump port
   io.ocm.req.addr := UInt(0)
   io.ocm.req.writeEn := Bool(false)
   io.ocm.req.writeData := io.mcif.fillPort.bits
 
-  val sIdle :: sFill :: sDump :: sFinished :: Nil = Enum(UInt(), 4)
+  val sIdle :: sFill :: sDumpWait :: sDump :: sFinished :: Nil = Enum(UInt(), 5)
   val regState = Reg(init = UInt(sIdle))
+
+  // default assignment to valid shiftreg
+  regDumpValid := Bool(false)
 
   switch(regState) {
       is(sIdle) {
         regAddr := UInt(0)
+        regWordsLeft := UInt(p.readDepth)
+        regReqCount := UInt(0)
         when(io.mcif.start) {
           when (io.mcif.mode === UInt(0)) { regState := sFill }
-          .elsewhen (io.mcif.mode === UInt(1)) { regState := sDump }
+          .elsewhen (io.mcif.mode === UInt(1)) { regState := sDumpWait }
         }
       }
 
@@ -128,9 +152,35 @@ class OCMController(p: OCMParameters) extends Module {
         }
       }
 
+      is(sDumpWait) {
+        when (regWordsLeft === UInt(0)) {regState := sFinished}
+        // we only issue requests to BRAM if the FIFO can hold
+        // responses from all (bramStages) requests
+        .elsewhen (hasRoom) {
+          // calculate the next burst length:
+          // we might have less than a full burst's worth of words left in BRAM
+          val canDoFullReq = (regWordsLeft > UInt(p.readLatency))
+          regReqCount := Mux(canDoFullReq, UInt(p.readLatency), regWordsLeft)
+          // start burst
+          regState := sDump
+        }
+      }
+
       is(sDump) {
-        // TODO
-        regState := sFinished
+        io.ocm.req.addr := p.makeReadAddr(regAddr)
+
+        when ( regReqCount === UInt(0) ) {
+          // no more requests in burst, wait for more room
+          regState := sDumpWait
+        } .otherwise {
+          // issue requests (one burst beat)
+          regDumpValid := Bool(true)
+          // one less beat to go
+          regReqCount := regReqCount - UInt(1)
+          regAddr := regAddr + UInt(1)
+          regWordsLeft := regWordsLeft - UInt(1)
+          // TODO update count calculations here if we do multi-port dump
+        }
       }
 
       is(sFinished) {
