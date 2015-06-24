@@ -5,16 +5,26 @@ import Chisel._
 
 // a collection of values that define the OCM
 // for now we require all ports to have the same dimensions
-class OCMParameters {
-  var addrWidth: Int = 0
-  var readDepth: Int = 0
-  var readWidth: Int = 0
-  var readAddrShift: Int = 0
-  var writeDepth: Int = 0
-  var writeWidth: Int = 0
-  var writeAddrShift: Int = 0
-  var latency: Int = 0
-  var portCount: Int = 0
+class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
+  // minimum port width
+  val minW: Int = math.min(rWidth, wWidth)
+  // address width is determined by min port width
+  val addrWidth: Int = log2Up(b/minW)
+  val readDepth: Int = b/rWidth
+  val readWidth: Int = rWidth
+  val writeDepth: Int = b/wWidth
+  val writeWidth: Int = wWidth
+  val readLatency: Int = lat
+  val portCount: Int = pts
+  val bits: Int = b
+
+  def makeReadAddr(x: UInt): UInt = {
+    if (rWidth < wWidth) x else (x << UInt(log2Up(rWidth/wWidth)))
+  }
+
+  def makeWriteAddr(x: UInt): UInt = {
+    if (wWidth < rWidth) x else (x << UInt(log2Up(wWidth/rWidth)))
+  }
 }
 
 class OCMRequest(writeWidth: Int, addrWidth: Int) extends Bundle {
@@ -109,7 +119,7 @@ class OCMController(p: OCMParameters) extends Module {
 
       is(sFill) {
         io.mcif.fillPort.ready := Bool(true)
-        io.ocm.req.addr := (regAddr << UInt(p.writeAddrShift))
+        io.ocm.req.addr := p.makeWriteAddr(regAddr)
 
         when (regAddr === UInt(p.writeDepth)) {regState := sFinished}
         .elsewhen (io.mcif.fillPort.valid) {
