@@ -35,6 +35,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
     // control/status interface
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
+    val throttle = Bool(INPUT)
     val baseAddr = UInt(INPUT, width = p.addrWidth)
     val byteCount = UInt(INPUT, width = p.addrWidth)
     // requests
@@ -67,7 +68,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
 
       is(sRun) {
         when (regBytesLeft === UInt(0)) { regState := sFinished }
-        .otherwise {
+        .elsewhen (!io.throttle) {
           // issue the current request
           io.reqs.valid := Bool(true)
           when (io.reqs.ready) {
