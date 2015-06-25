@@ -9,7 +9,7 @@ class ReqInterleaver(numPipes: Int, p: MemReqParams) extends Module {
   }
   // TODO for now, we just use a round-robin arbiter
   // TODO report statistics from the interleaved mix?
-  val arb = Module(new Arbiter(gen=new GenericMemoryRequest(p), n=numPipes))
+  val arb = Module(new RRArbiter(gen=new GenericMemoryRequest(p), n=numPipes))
   for (i <- 0 until numPipes) {
     arb.io.in(i) <> io.reqIn(i)
   }
