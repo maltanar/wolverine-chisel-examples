@@ -9,6 +9,7 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "common",
     base / "xilinx-utils",
     base / "aeg-to-aeg",
+    base / "multichan",
     base / "mem-sum"
   )
 }
