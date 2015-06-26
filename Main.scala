@@ -10,6 +10,7 @@ object MainObj {
     val functionMap: Map[String, () => Unit] = Map(
       "MemSum" -> makeMemSum,
       "ReadReqGen" -> makeReadReqGen,
+      "StreamReducerAdd" -> makeStreamReducerAdd,
       "TestReadReqGen" -> testReadReqGen,
       "TestReqInterleaver" -> testReqInterleaver
     )
@@ -17,6 +18,11 @@ object MainObj {
     println("Executing task: " + moduleName)
 
     functionMap(moduleName)()
+  }
+
+  def makeStreamReducerAdd(): Unit = {
+    val redFxn: (UInt,UInt)=>UInt = {(a,b)=>a+b}
+    chiselMain(defaultArgs, () => Module(new StreamReducer(64, 0, redFxn)))
   }
 
   def makeMemSum(): Unit = {
