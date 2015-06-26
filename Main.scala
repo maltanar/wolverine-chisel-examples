@@ -5,11 +5,14 @@ object MainObj {
   val defTestArgs = Array("--compile", "--test", "--genHarness")
   val testsDir: String = "testOutput/"
 
+  val p = new MemReqParams(48, 64, 4, 1, 8)
+
   def main(args: Array[String]): Unit = {
 
     val functionMap: Map[String, () => Unit] = Map(
       "MemSum" -> makeMemSum,
       "ReadReqGen" -> makeReadReqGen,
+      "MultiChanPipe" -> makeMultiChanPipe,
       "StreamReducerAdd" -> makeStreamReducerAdd,
       "TestReadReqGen" -> testReadReqGen,
       "TestReqInterleaver" -> testReqInterleaver
@@ -18,6 +21,10 @@ object MainObj {
     println("Executing task: " + moduleName)
 
     functionMap(moduleName)()
+  }
+
+  def makeMultiChanPipe(): Unit = {
+    chiselMain(defaultArgs, () => Module(new MultiChanPipe(p, 2)))
   }
 
   def makeStreamReducerAdd(): Unit = {
@@ -36,7 +43,6 @@ object MainObj {
   }
 
   def makeReadReqGen(): Unit = {
-    val p = new MemReqParams(48, 64, 4, 1, 8)
     chiselMain(defaultArgs, () => Module(new ReadReqGen(p, 0) ))
   }
 
