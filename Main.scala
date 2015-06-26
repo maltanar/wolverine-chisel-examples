@@ -10,7 +10,8 @@ object MainObj {
     val functionMap: Map[String, () => Unit] = Map(
       "MemSum" -> makeMemSum,
       "ReadReqGen" -> makeReadReqGen,
-      "TestReadReqGen" -> testReadReqGen
+      "TestReadReqGen" -> testReadReqGen,
+      "TestReqInterleaver" -> testReqInterleaver
     )
     val moduleName = args(0)
     println("Executing task: " + moduleName)
@@ -34,10 +35,19 @@ object MainObj {
   }
 
   def testReadReqGen(): Unit = {
-    val args = defTestArgs ++ Array(testsDir+"TestReadReqGen")
+    val args = defTestArgs ++ Array("--targetDir", testsDir+"TestReadReqGen")
 
     val compInstFxn = { () => Module(new TestReadReqGenWrapper()) }
     val testInstFxn = { c => new TestReadReqGen(c) }
+
+    chiselMain(args, compInstFxn, testInstFxn)
+  }
+
+  def testReqInterleaver(): Unit = {
+    val args = defTestArgs ++ Array("--targetDir", testsDir+"TestReqInterleaver")
+
+    val compInstFxn = { () => Module(new TestReqInterleaverWrapper()) }
+    val testInstFxn = { c => new TestReqInterleaver(c) }
 
     chiselMain(args, compInstFxn, testInstFxn)
   }
