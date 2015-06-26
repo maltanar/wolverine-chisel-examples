@@ -9,6 +9,7 @@ class MemReqParams(aW: Int, dW: Int, iW: Int, mW: Int, b: Int) {
   val idWidth: Int = iW         // width of channel ID
   val metaDataWidth: Int = mW   // width of metadata (cache, prot, etc.)
   val beatsPerBurst: Int = b    // number of beats in a burst
+  val bytesPerBurst: Int = b*(dW/8)
 
   override def clone = {
     new MemReqParams(aW, dW, iW, mW, b).asInstanceOf[this.type]
