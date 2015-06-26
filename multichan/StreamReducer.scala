@@ -24,7 +24,7 @@ class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module
   switch(regState) {
       is(sIdle) {
         regReduced := UInt(initVal)
-        regElemsLeft := io.byteCount
+        regBytesLeft := io.byteCount
 
         when (io.start) { regState := sRunning }
       }
