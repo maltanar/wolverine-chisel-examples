@@ -21,7 +21,8 @@ class MultiChanPipe(p: MemReqParams, chans: Int) extends Module {
   val deintl = Module(new RespDeinterleaver(chans, p))
   val rspQ = Module(new Queue(new GenericMemoryResponse(p), 16))
   val reduceQ = Vec.fill(chans) { Module(new Queue(UInt(width=64), 8)).io }
-  val reducers = Vec.fill(chans) { Module(new StreamReducer(64, 0, (_+_)).io }
+  val redFxn: (UInt,UInt)=>UInt = {(a,b)=>a+b}
+  val reducers = Vec.fill(chans) { Module(new StreamReducer(64, 0, redFxn)).io }
 
   for(i <- 0 until chans) {
     // control to request generators
@@ -35,16 +36,28 @@ class MultiChanPipe(p: MemReqParams, chans: Int) extends Module {
     // status from reducers
     io.chanSum(i) := reducers(i).reduced
     // link data streams
+    // req. gens to interleaver
     reqGen(i).reqs <> intl.io.reqIn(i)
-    // TODO add response adapter in-between here
-    deintl.io.rspOut(i) <> reduceQ(i).enq
+    // deinterleaver to reduce queues
+    reduceQ(i).enq.valid := deintl.io.rspOut(i).valid
+    reduceQ(i).enq.bits := deintl.io.rspOut(i).bits.readData
+    deintl.io.rspOut(i).ready := reduceQ(i).enq.ready
+    // reduce queues to reducers
     reduceQ(i).deq <> reducers(i).streamIn
   }
   // AND-reduce all channels' reducers to generate done
   io.done := reducers.forall(rg => rg.finished)
-  // TODO make adapter and connect interleaver to memory port
-  // connect memory port responses to response queue
-  io.mem.rsp <> rspQ.io.enq
+
+  // install req adapter between interleaver and memory port
+  val adpReq = Module(new ConveyMemReqAdp(p))
+  adpReq.io.genericReqIn <> intl.io.reqOut
+  adpReq.io.conveyReqOut <> io.mem.req
+
+  // install resp adapter between memory port and response queue
+  val adpResp = Module(new ConveyMemRspAdp(p))
+  adpResp.io.conveyRspIn <> io.mem.rsp
+  adpResp.io.genericRspOut <> rspQ.io.enq
+
   // connect response queue to deinterleaver
   rspQ.io.deq <> deintl.io.rspIn
 
