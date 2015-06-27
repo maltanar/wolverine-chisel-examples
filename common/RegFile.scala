@@ -7,10 +7,9 @@ class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
     val extIF = new RegFileSlaveIF(idBits, dataBits)
     // exposed values of all registers, for internal use
     val regOut = Vec.fill(numRegs) { UInt(OUTPUT, width = dataBits) }
-    // internal write port (takes priority over extIF)
-    val regWrInd = UInt(INPUT, width = idBits)
-    val regWrEn  = Bool(INPUT)
-    val regWrData = UInt(INPUT, dataBits)
+    // valid pipes for writing new values for all registers, for internal use
+    // (extIF takes priority over this)
+    val regIn = Vec.fill(numRegs) { Valid(UInt(width = dataBits)).flip }
   }
   // drive num registers to compile-time constant
   io.extIF.regCount := UInt(numRegs)
@@ -22,11 +21,11 @@ class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
   val regCommand = Reg(next = io.extIF.cmd.bits)
   val regDoCmd = Reg(init = Bool(false), next = io.extIF.cmd.valid)
 
-  val hasReadCommand = (regDoCmd && regCommand.read)
-  val hasWriteCommand = (regDoCmd && regCommand.write)
+  val hasExtReadCommand = (regDoCmd && regCommand.read)
+  val hasExtWriteCommand = (regDoCmd && regCommand.write)
 
   // register read logic
-  io.extIF.readData.valid := hasReadCommand
+  io.extIF.readData.valid := hasExtReadCommand
   // make sure regID stays within range for memory read
   when (regCommand.regID < UInt(numRegs)) {
     io.extIF.readData.bits  := regFile(regCommand.regID)
@@ -36,15 +35,18 @@ class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
   }
 
   // register write logic
-  // single-port writes: "internal" write port (regWr*) takes priority over
-  // extIF if both access simultaneously
-  when (io.regWrEn) {
-    regFile(io.regWrInd) := io.regWrData
-  } .elsewhen (hasWriteCommand) {
+  // to avoid multiple ports, we prioritize the extIF writes over the internal
+  // ones (e.g if there is an external write present, the internal write will
+  // be ignored if it arrives simultaneously)
+  when (hasExtWriteCommand) {
     regFile(regCommand.regID) := regCommand.writeData
+  } .otherwise {
+    for(i <- 0 until numRegs) {
+      when (io.regIn(i).valid) { regFile(i) := io.regIn(i).bits }
+    }
   }
 
-  // expose all reg outputs
+  // expose all reg outputs for personality's access
   for (i <- 0 to numRegs-1) {
     io.regOut(i) := regFile(i)
   }
