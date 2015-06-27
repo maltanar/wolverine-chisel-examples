@@ -5,6 +5,10 @@ object MainObj {
   val defTestArgs = Array("--compile", "--test", "--genHarness")
   val testsDir: String = "testOutput/"
 
+  // number of memory ports to instantiate for Convey personalities
+  // TODO command line-parametize (weakly, so we get defaults too)
+  val numMemPorts = 1
+
   val p = new MemReqParams(48, 64, 4, 1, 8)
 
   def main(args: Array[String]): Unit = {
@@ -13,6 +17,7 @@ object MainObj {
       "MemSum" -> makeMemSum,
       "ReadReqGen" -> makeReadReqGen,
       "MultiChanPipe" -> makeMultiChanPipe,
+      "MultiChanMemSum" -> makeMultiChanSum,
       "StreamReducerAdd" -> makeStreamReducerAdd,
       "TestReadReqGen" -> testReadReqGen,
       "TestReqInterleaver" -> testReqInterleaver
@@ -21,6 +26,11 @@ object MainObj {
     println("Executing task: " + moduleName)
 
     functionMap(moduleName)()
+  }
+
+  def makeMultiChanSum(): Unit = {
+    def InstPersonality() : Personality = {new MultiChanMemSum(numMemPorts, 2)}
+    chiselMain(defaultArgs, () => Module(new PersonalityWrapper(numMemPorts, InstPersonality)))
   }
 
   def makeMultiChanPipe(): Unit = {
@@ -33,9 +43,6 @@ object MainObj {
   }
 
   def makeMemSum(): Unit = {
-    // number of memory ports to instantiate
-    // TODO command line-parametize (weakly, so we get defaults too)
-    val numMemPorts = 1
     // this "fabricator function" is needed due to how modules need to be
     // wrapped, as in Module(new ModuleType()), is implemented in Chisel
     def InstPersonality() : Personality = {new MemSum(numMemPorts)}
