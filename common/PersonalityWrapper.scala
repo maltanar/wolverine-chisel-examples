@@ -106,4 +106,6 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
     }
   }
   println(s"====> Remember to set NUM_MC_PORTS=$numCalculatedMemPorts in cae_pers.v")
+  val numRtnCtlBits = ConveyMemParams().idWidth
+  println(s"====> Remember to set RTNCTL_WIDTH=$numRtnCtlBits in cae_pers.v")
 }

@@ -1,19 +1,5 @@
 import Chisel._
-
-// a generic memory response structure
-class GenericMemoryResponse(p: MemReqParams) extends Bundle {
-  // ID of the request channel (useful for out-of-order data returns)
-  val channelID = UInt(width = p.idWidth)
-  // returned read data (always single beat, bursts broken down into
-  // multiple beats while returning)
-  val readData = UInt(width = p.dataWidth)
-  // metadata information (can be status/error bits, etc.)
-  val metaData = UInt(width = p.metaDataWidth)
-
-  override def clone = {
-    new GenericMemoryResponse(p).asInstanceOf[this.type]
-  }
-}
+import GenericMemReqRsp._
 
 class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
   val io = new Bundle {

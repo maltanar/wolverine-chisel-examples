@@ -1,4 +1,6 @@
 import Chisel._
+import GenericMemReqRsp._
+
 
 class ReqInterleaver(numPipes: Int, p: MemReqParams) extends Module {
   val io = new Bundle {

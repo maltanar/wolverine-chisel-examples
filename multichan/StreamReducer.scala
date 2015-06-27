@@ -1,6 +1,5 @@
 import Chisel._
 
-
 class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module {
 
   val io = new Bundle {

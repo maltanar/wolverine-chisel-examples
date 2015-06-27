@@ -1,5 +1,6 @@
 import Chisel._
 import ConveyInterfaces._
+import GenericMemReqRsp._
 
 // TODO update adapter to also work for writes
 class ConveyMemReqAdp(p: MemReqParams) extends Module {

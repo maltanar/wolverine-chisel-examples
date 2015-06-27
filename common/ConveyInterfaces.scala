@@ -1,8 +1,7 @@
 package ConveyInterfaces
 
 import Chisel._
-import Literal._
-import Node._
+import GenericMemReqRsp._
 
 // command bundle for read/writes to AEG/CSR registers
 class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
@@ -42,6 +41,10 @@ class DispatchSlaveIF() extends Bundle {
   override def clone = { new DispatchSlaveIF().asInstanceOf[this.type] }
 }
 
+object ConveyMemParams {
+  def apply() = {new MemReqParams(48, 64, 4, 1, 8)}
+}
+
 // command (request) bundle for memory read/writes
 class MemRequest(rtnCtlBits: Int, addrBits: Int, dataBits: Int) extends Bundle {
   val rtnCtl      = UInt(width = rtnCtlBits)
@@ -68,8 +71,8 @@ class MemResponse(rtnCtlBits: Int, dataBits: Int) extends Bundle {
 class MemMasterIF() extends Bundle {
   // note that req and rsp are defined by Convey as stall/valid interfaces
   // (instead of ready/valid as defined here) -- needs adapter
-  val req         = Decoupled(new MemRequest(32, 48, 64))
-  val rsp         = Decoupled(new MemResponse(32, 64)).flip
+  val req         = Decoupled(new MemRequest(ConveyMemParams().idWidth, 48, 64))
+  val rsp         = Decoupled(new MemResponse(ConveyMemParams().idWidth, 64)).flip
   val flushReq    = Bool(OUTPUT)
   val flushOK     = Bool(INPUT)
 

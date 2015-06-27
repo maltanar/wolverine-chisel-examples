@@ -1,15 +1,16 @@
 import Chisel._
+import ConveyInterfaces._
 
 object MainObj {
   val defaultArgs: Array[String] = Array("--v")
   val defTestArgs = Array("--compile", "--test", "--genHarness")
   val testsDir: String = "testOutput/"
+  val p = ConveyMemParams()
 
   // number of memory ports to instantiate for Convey personalities
   // TODO command line-parametize (weakly, so we get defaults too)
   val numMemPorts = 1
 
-  val p = new MemReqParams(48, 64, 4, 1, 8)
 
   def main(args: Array[String]): Unit = {
 

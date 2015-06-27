@@ -1,5 +1,7 @@
 import Chisel._
 import ConveyInterfaces._
+import GenericMemReqRsp._
+
 
 class MultiChanMemSum(numMemPorts: Int, val chansPerPort: Int) extends Personality(numMemPorts) {
   // I/O is defined by the base class (Personality)
@@ -21,8 +23,7 @@ class MultiChanMemSum(numMemPorts: Int, val chansPerPort: Int) extends Personali
   io.csr.readData.valid := Bool(false)
   io.csr.regCount := UInt(0)
 
-  // TODO move this defn. to somewhere general (ConveyInterfaces?)
-  val p = new MemReqParams(48, 64, 4, 1, 8)
+  val p = ConveyMemParams()
 
   val pipes = Vec.fill(numMemPorts) { Module(new MultiChanPipe(p, chansPerPort)).io }
   val regPipeStart = Reg(init = Bool(false))

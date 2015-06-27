@@ -1,5 +1,7 @@
 import Chisel._
 import ConveyInterfaces._
+import GenericMemReqRsp._
+
 
 class MultiChanPipeIF(chans: Int) extends Bundle {
   val start = Bool(INPUT)               // start signal
