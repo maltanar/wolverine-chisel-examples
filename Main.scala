@@ -17,12 +17,19 @@ object MainObj {
     val functionMap: Map[String, () => Unit] = Map(
       "MemSum" -> makeMemSum,
       "MultiChanPipe" -> makeMultiChanPipe,
-      "MultiChanMemSum" -> makeMultiChanSum
+      "MultiChanMemSum" -> makeMultiChanSum,
+      "BRAMTest" -> makeBRAMTest
     )
     val moduleName = args(0)
     println("Executing task: " + moduleName)
 
     functionMap(moduleName)()
+  }
+
+  def makeBRAMTest(): Unit = {
+    val numMemPorts = 1 // only supports single port for now
+    def InstPersonality() : Personality = {new BRAMTest()}
+    chiselMain(defaultArgs, () => Module(new PersonalityWrapper(numMemPorts, InstPersonality)))
   }
 
   def makeMultiChanSum(): Unit = {
