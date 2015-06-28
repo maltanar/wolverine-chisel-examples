@@ -1,6 +1,7 @@
 import Chisel._
 import ConveyInterfaces._
 import TidbitsOCM._
+import TidbitsRegFile._
 
 // TODO parametrize num of mem ports connected (also BRAM modules to inst.)
 class BRAMTest() extends Personality(1) {

@@ -1,6 +1,7 @@
 import Chisel._
 import ConveyInterfaces._
-import GenericMemReqRsp._
+import TidbitsDMA._
+import TidbitsRegFile._
 
 
 class MultiChanMemSum(numMemPorts: Int, val chansPerPort: Int) extends Personality(numMemPorts) {

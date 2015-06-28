@@ -1,5 +1,6 @@
 import Chisel._
 import ConveyInterfaces._
+import TidbitsRegFile._
 
 class AEGtoAEG(numMemPorts: Int) extends Personality(numMemPorts) {
   val aegRegCount = 4

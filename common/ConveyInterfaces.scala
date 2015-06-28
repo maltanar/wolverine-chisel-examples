@@ -1,30 +1,8 @@
 package ConveyInterfaces
 
 import Chisel._
-import GenericMemReqRsp._
-
-// command bundle for read/writes to AEG/CSR registers
-class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
-  val regID     = UInt(width = idBits)
-  val read      = Bool()
-  val write     = Bool()
-  val writeData = UInt(width = dataBits)
-
-  override def clone = { new RegCommand(idBits, dataBits).asInstanceOf[this.type] }
-}
-
-// register file interface
-class RegFileSlaveIF(idBits: Int, dataBits: Int) extends Bundle {
-  // register read/write commands
-  // the "valid" signal here should be connected to (.read OR .write)
-  val cmd         = Valid(new RegCommand(idBits, dataBits)).flip
-  // returned read data
-  val readData    = Valid(UInt(width = dataBits))
-  // number of registers
-  val regCount    = UInt(OUTPUT, width = idBits)
-
-  override def clone = { new RegFileSlaveIF(idBits, dataBits).asInstanceOf[this.type] }
-}
+import TidbitsDMA._
+import TidbitsRegFile._
 
 // dispatch slave interface
 // for accepting instructions and AEG register operations

@@ -10,6 +10,8 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "fpga-tidbits/on-chip-memory",
     base / "fpga-tidbits/interfaces",
     base / "fpga-tidbits/streams",
+    base / "fpga-tidbits/regfile",
+    base / "fpga-tidbits/dma",
     base / "aeg-to-aeg",
     base / "multichan",
     base / "mem-sum",

@@ -1,5 +1,6 @@
 import Chisel._
 import ConveyInterfaces._
+import TidbitsRegFile._
 
 class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   // I/O is defined by the base class (Personality)
