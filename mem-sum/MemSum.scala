@@ -1,14 +1,17 @@
 import Chisel._
 import ConveyInterfaces._
+import TidbitsRegFile._
 
 class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   // I/O is defined by the base class (Personality)
+  val aegRegCount = 4
+  val csrRegCount = 4
 
   // instantiate and connect main (ops) register file
-  val regFile = Module(new RegFile(4, 18, 64))
+  val regFile = Module(new RegFile(aegRegCount, 18, 64))
   regFile.io.extIF <> io.disp.aeg
   // instantiate and connect the CSR register file
-  val csrRegFile = Module(new RegFile(4, 16, 64))
+  val csrRegFile = Module(new RegFile(csrRegCount, 16, 64))
   csrRegFile.io.extIF <> io.csr
 
   // give names to registers for readability
@@ -42,17 +45,25 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
   // do not accept instrs by default
   io.disp.instr.ready := Bool(false)
 
-  // ops regfile internal write port
-  regFile.io.regWrInd := UInt(0)
-  regFile.io.regWrData := UInt(0)
-  regFile.io.regWrEn := Bool(false)
+  // plug ops regfile internal write port by default
+  for(i <- 0 until aegRegCount) {
+    regFile.io.regIn(i).valid := Bool(false)
+  }
+  // route result data to register write ports
+  // write enables will be set when we are finished
+  val regIndSum = 2
+  val regIndCycleCount = 3
+  def enableWrite(ind: Int) = { regFile.io.regIn(ind).valid := Bool(true)}
+  regFile.io.regIn(regIndSum).bits := regSum
+  regFile.io.regIn(regIndCycleCount).bits := regCycleCount
 
-  // csr regfile internal write port
-  csrRegFile.io.regWrInd := UInt(0)
-  csrRegFile.io.regWrData := regCycleCount
-  csrRegFile.io.regWrEn := Bool(false)
+  // plug csr regfile internal write ports, we don't use them in this example
+  for(i <- 0 until csrRegCount) {
+    csrRegFile.io.regIn(i).valid := Bool(false)
+    csrRegFile.io.regIn(i).bits := UInt(0)
+  }
 
-  val sIdle :: sDispatch :: sWait :: sAccumulateSums :: sFinish :: sFinish2 :: Nil = Enum(UInt(), 6)
+  val sIdle :: sDispatch :: sWait :: sAccumulateSums :: sFinish :: Nil = Enum(UInt(), 5)
   val regState = Reg(init = UInt(sIdle))
 
   switch(regState) {
@@ -88,7 +99,6 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
         }
         // keep cycle count for BW statistics
         regCycleCount := regCycleCount + UInt(1)
-        csrRegFile.io.regWrEn := Bool(true)
       }
 
       is(sAccumulateSums) {
@@ -102,20 +112,9 @@ class MemSum(numMemPorts: Int) extends Personality(numMemPorts) {
       }
 
       is(sFinish) {
-        // write result to register file
-        regFile.io.regWrEn := Bool(true)
-        regFile.io.regWrInd := UInt(2)
-        regFile.io.regWrData := regSum
-        regState := sFinish2
-      }
-
-      is(sFinish2) {
-        // write cycle count to register file
-        // this should normally be read thru CSR, but accessing these on the
-        // Wolverine is not properly documented
-        regFile.io.regWrEn := Bool(true)
-        regFile.io.regWrInd := UInt(3)
-        regFile.io.regWrData := regCycleCount
+        // write results to register file
+        enableWrite(regIndSum)
+        enableWrite(regIndCycleCount)
         // back to idle
         regState := sIdle
       }

@@ -77,7 +77,6 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
     }
 
     // connect Chisel outputs (AoS) to personality outputs (SoA)
-    io.mcReqValid := CatMemPortHelper((m: MemMasterIF) => (m.req.valid))
     io.mcReqRtnCtl := CatMemPortHelper((m: MemMasterIF) => (m.req.bits.rtnCtl))
     io.mcReqData := CatMemPortHelper((m: MemMasterIF) => (m.req.bits.writeData))
     io.mcReqAddr := CatMemPortHelper((m: MemMasterIF) => (m.req.bits.addr))
@@ -104,6 +103,14 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
       persMemPorts(i).rsp.bits.cmd := io.mcResCmd(3*(i+1)-1, 3*i)
       persMemPorts(i).rsp.bits.scmd := io.mcResSCmd(4*(i+1)-1, 4*i)
     }
+    // Convey's interface semantics (stall-valid) are a bit more different than
+    // just a decoupled (inverted ready)-valid: valid must actually go down
+    // after stall is asserted. to compensate for this, we AND the valid
+    // with the inverse of stall before outputting
+    // TODO do not create potential combinational loop
+    io.mcReqValid := CatMemPortHelper((m: MemMasterIF) => (m.req.valid & m.req.ready))
   }
   println(s"====> Remember to set NUM_MC_PORTS=$numCalculatedMemPorts in cae_pers.v")
+  val numRtnCtlBits = ConveyMemParams().idWidth
+  println(s"====> Remember to set RTNCTL_WIDTH=$numRtnCtlBits in cae_pers.v")
 }

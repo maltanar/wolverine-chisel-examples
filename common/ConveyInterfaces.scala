@@ -1,31 +1,8 @@
 package ConveyInterfaces
 
 import Chisel._
-import Literal._
-import Node._
-
-// command bundle for read/writes to AEG/CSR registers
-class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
-  val regID     = UInt(width = idBits)
-  val read      = Bool()
-  val write     = Bool()
-  val writeData = UInt(width = dataBits)
-
-  override def clone = { new RegCommand(idBits, dataBits).asInstanceOf[this.type] }
-}
-
-// register file interface
-class RegFileSlaveIF(idBits: Int, dataBits: Int) extends Bundle {
-  // register read/write commands
-  // the "valid" signal here should be connected to (.read OR .write)
-  val cmd         = Valid(new RegCommand(idBits, dataBits)).flip
-  // returned read data
-  val readData    = Valid(UInt(width = dataBits))
-  // number of registers
-  val regCount    = UInt(OUTPUT, width = idBits)
-
-  override def clone = { new RegFileSlaveIF(idBits, dataBits).asInstanceOf[this.type] }
-}
+import TidbitsDMA._
+import TidbitsRegFile._
 
 // dispatch slave interface
 // for accepting instructions and AEG register operations
@@ -40,6 +17,10 @@ class DispatchSlaveIF() extends Bundle {
   val exception   = UInt(OUTPUT, width = 16)
 
   override def clone = { new DispatchSlaveIF().asInstanceOf[this.type] }
+}
+
+object ConveyMemParams {
+  def apply() = {new MemReqParams(48, 64, 4, 1, 8)}
 }
 
 // command (request) bundle for memory read/writes
@@ -68,8 +49,8 @@ class MemResponse(rtnCtlBits: Int, dataBits: Int) extends Bundle {
 class MemMasterIF() extends Bundle {
   // note that req and rsp are defined by Convey as stall/valid interfaces
   // (instead of ready/valid as defined here) -- needs adapter
-  val req         = Decoupled(new MemRequest(32, 48, 64))
-  val rsp         = Decoupled(new MemResponse(32, 64)).flip
+  val req         = Decoupled(new MemRequest(ConveyMemParams().idWidth, 48, 64))
+  val rsp         = Decoupled(new MemResponse(ConveyMemParams().idWidth, 64)).flip
   val flushReq    = Bool(OUTPUT)
   val flushOK     = Bool(INPUT)
 
