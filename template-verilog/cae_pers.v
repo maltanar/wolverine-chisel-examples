@@ -125,7 +125,7 @@ module cae_pers #(
    //assert_never #(1, 2, "***ERROR ASSERT: unimplemented instruction cracked") a0 (.clk(clk), .reset_n(!i_reset), .test_expr(r_unimplemented_inst));
 
    // Parameters: 0-Severity: Stop, 2-start check only after negedge of reset
-   assert_never #(0, 2, "***ERROR ASSERT: Number of MC Ports must be a power of 2") a1 (.clk(clk), .reset_n(!i_reset), .test_expr(|config_err));
+   //assert_never #(0, 2, "***ERROR ASSERT: Number of MC Ports must be a power of 2") a1 (.clk(clk), .reset_n(!i_reset), .test_expr(|config_err));
 
     // synopsys translate_on
 
