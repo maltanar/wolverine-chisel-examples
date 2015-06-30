@@ -83,31 +83,50 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
     io.mcReqSize := CatMemPortHelper((m: MemMasterIF) => (m.req.bits.size))
     io.mcReqCmd := CatMemPortHelper((m: MemMasterIF) => (m.req.bits.cmd))
     io.mcReqSCmd := CatMemPortHelper((m: MemMasterIF) => (m.req.bits.scmd))
-    // note the ~ here to convert ready to stall
-    io.mcResStall := ~CatMemPortHelper((m: MemMasterIF) => (m.rsp.ready))
     io.mcReqFlush := CatMemPortHelper((m: MemMasterIF) => (m.flushReq))
+
+    // Convey's interface semantics (stall-valid) are a bit more different than
+    // just a decoupled (inverted ready)-valid:
+    // X1) valid and stall asserted together can still mean a transferred element
+    //     (i.e valid may not go down for up to 2 cycles after stall is asserted)
+    // X2) valid on Convey IF must actually go down after stall is asserted
+
+    // compensate for interface semantics mismatch for memory responses (X1) with
+    // little queues:
+    // - personality receives responses through queue
+    // - Convey mem.port's stall is driven by "almost full" from queue
+    val respQueElems = 8
+    val respQueues = Vec.fill(numMemPorts) {
+      Module(new Queue(new MemResponse(ConveyMemParams().idWidth, 64), respQueElems)).io
+    }
+
+    // an "almost full" derived from the queue count is used
+    // to drive the Convey mem resp port's stall input
+    // the 2 here is max cycles the Convey IF will keep driving valid
+    // after it detects a stall (from the specification)
+    io.mcResStall := Cat(respQueues.map(x => (x.count >= UInt(respQueElems-2))))
 
     // connect personality inputs to Chisel inputs
     for (i <- 0 to numMemPorts-1) {
+      respQueues(i).enq.valid := io.mcResValid(i)
+      respQueues(i).enq.bits.rtnCtl := io.mcResRtnCtl(32*(i+1)-1, 32*i)
+      respQueues(i).enq.bits.readData := io.mcResData(64*(i+1)-1, 64*i)
+      respQueues(i).enq.bits.cmd := io.mcResCmd(3*(i+1)-1, 3*i)
+      respQueues(i).enq.bits.scmd := io.mcResSCmd(4*(i+1)-1, 4*i)
+      // note that we don't use the enq.ready signal from the queue
+
+      // personality receives responses directly from the queue deq IF
+      persMemPorts(i).rsp <> respQueues(i).deq
+
       // single-bit signals
-      persMemPorts(i).rsp.valid := io.mcResValid(i)
       persMemPorts(i).flushOK := io.mcResFlushOK(i)
       // note the ~ here to convert stall to ready
       persMemPorts(i).req.ready := ~io.mcReqStall(i)
-
-      // multi-bit signals
-      // TODO can we do this cleaner, by e.g. defining the right-hands
-      // as Chisel Vec instead of wide signals?
-      persMemPorts(i).rsp.bits.rtnCtl := io.mcResRtnCtl(32*(i+1)-1, 32*i)
-      persMemPorts(i).rsp.bits.readData := io.mcResData(64*(i+1)-1, 64*i)
-      persMemPorts(i).rsp.bits.cmd := io.mcResCmd(3*(i+1)-1, 3*i)
-      persMemPorts(i).rsp.bits.scmd := io.mcResSCmd(4*(i+1)-1, 4*i)
     }
-    // Convey's interface semantics (stall-valid) are a bit more different than
-    // just a decoupled (inverted ready)-valid: valid must actually go down
-    // after stall is asserted. to compensate for this, we AND the valid
-    // with the inverse of stall before outputting
-    // TODO do not create potential combinational loop
+
+    // to compensate for X2, we AND the valid with the inverse of stall before
+    // outputting valid
+    // TODO do not create potential combinational loop -- make queue-based sln?
     io.mcReqValid := CatMemPortHelper((m: MemMasterIF) => (m.req.valid & m.req.ready))
   }
   println(s"====> Remember to set NUM_MC_PORTS=$numCalculatedMemPorts in cae_pers.v")
