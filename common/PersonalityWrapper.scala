@@ -95,16 +95,16 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
     // little queues:
     // - personality receives responses through queue
     // - Convey mem.port's stall is driven by "almost full" from queue
-    val respQueElems = 8
+    val respQueElems = 16
     val respQueues = Vec.fill(numMemPorts) {
       Module(new Queue(new MemResponse(ConveyMemParams().idWidth, 64), respQueElems)).io
     }
 
     // an "almost full" derived from the queue count is used
     // to drive the Convey mem resp port's stall input
-    // the 2 here is max cycles the Convey IF will keep driving valid
-    // after it detects a stall (from the specification)
-    io.mcResStall := Cat(respQueues.map(x => (x.count >= UInt(respQueElems-2))))
+    // this is quite conservative (stall when FIFO is half full) but
+    // it seems to work (there may be a deeper problem here)
+    io.mcResStall := Cat(respQueues.map(x => (x.count >= UInt(respQueElems/2))))
 
     // connect personality inputs to Chisel inputs
     for (i <- 0 to numMemPorts-1) {
