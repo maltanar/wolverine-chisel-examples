@@ -26,7 +26,7 @@ object MainObj {
   }
 
   def makeBRAMTest(): Unit = {
-    val numMemPorts = 1 // only supports single port for now
+    val numMemPorts = 1
     def InstPersonality() : Personality = {new BRAMTest(numMemPorts)}
     chiselMain(defaultArgs, () => Module(new PersonalityWrapper(numMemPorts, InstPersonality)))
   }
