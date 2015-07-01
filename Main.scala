@@ -11,7 +11,6 @@ object MainObj {
   // TODO command line-parametize (weakly, so we get defaults too)
   val numMemPorts = 1
 
-
   def main(args: Array[String]): Unit = {
 
     val functionMap: Map[String, () => Unit] = Map(
@@ -28,7 +27,7 @@ object MainObj {
 
   def makeBRAMTest(): Unit = {
     val numMemPorts = 1 // only supports single port for now
-    def InstPersonality() : Personality = {new BRAMTest()}
+    def InstPersonality() : Personality = {new BRAMTest(numMemPorts)}
     chiselMain(defaultArgs, () => Module(new PersonalityWrapper(numMemPorts, InstPersonality)))
   }
 
