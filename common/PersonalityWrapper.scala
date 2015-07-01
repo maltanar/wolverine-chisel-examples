@@ -104,7 +104,9 @@ class PersonalityWrapper(numMemPorts: Int, instFxn: () => Personality) extends M
     // to drive the Convey mem resp port's stall input
     // this is quite conservative (stall when FIFO is half full) but
     // it seems to work (there may be a deeper problem here)
-    io.mcResStall := Cat(respQueues.map(x => (x.count >= UInt(respQueElems/2))))
+    val respStall = Cat(respQueues.map(x => (x.count >= UInt(respQueElems/2))))
+    // Cat concatenation order needs to be reversed
+    io.mcResStall := Reverse(respStall)
 
     // connect personality inputs to Chisel inputs
     for (i <- 0 to numMemPorts-1) {
