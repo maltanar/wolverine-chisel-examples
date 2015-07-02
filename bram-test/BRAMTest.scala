@@ -11,6 +11,7 @@ class BRAMTestPipeIF(p: OCMParameters) extends Bundle {
   val done = Bool(OUTPUT)
   val baseAddr = UInt(INPUT, width = 64)
   val dumpSum = UInt(OUTPUT, width = p.readWidth)
+  val dumpBaseAddr = UInt(INPUT, width = 64)
   val mem = new MemMasterIF()
 }
 
@@ -25,36 +26,68 @@ class BRAMTestPipe(p: OCMParameters) extends Module {
 
   ocmc.io.mcif.mode := Mux(io.startDump, UInt(1), UInt(0))
   ocmc.io.mcif.start := io.startFill | io.startDump
-  // connect fill port to memory read responses, with downsizer in between
+  val mp = ConveyMemParams()
+
+  // instantiate write generator
+  val wrqgen = Module(new WriteReqGen(mp, 1))
+  wrqgen.io.ctrl.start := io.startDump
+  wrqgen.io.ctrl.throttle := Bool(false)
+  wrqgen.io.ctrl.baseAddr := io.dumpBaseAddr
+  // use 2x the number of writes since we don't have an upsizer right now
+  wrqgen.io.ctrl.byteCount := UInt(2*p.bits/8)
+
+  // instantiate response adapter and deinterleaver
+  val rspad = Module(new ConveyMemRspAdp(mp))
+  val deint = Module(new RespDeinterleaver(2, mp))
+  rspad.io.conveyRspIn <> io.mem.rsp
+  rspad.io.genericRspOut <> deint.io.rspIn
+  // just consume all write responses (to channel 1)
+  deint.io.rspOut(1).ready := Bool(true)
+  // add a little queue to break combinational path
+  val fillQ = Module(new Queue(UInt(width=64), 8))
+  fillQ.io.enq.valid := deint.io.rspOut(0).valid
+  fillQ.io.enq.bits := deint.io.rspOut(0).bits.readData
+  deint.io.rspOut(0).ready := fillQ.io.enq.ready
+
+  // connect fill port to channel 0 responses, with downsizer in between
   val ds = Module(new AXIStreamDownsizer(64, p.writeWidth))
-  io.mem.rsp.ready := ds.io.in.ready
-  ds.io.in.valid := io.mem.rsp.valid
-  ds.io.in.bits := io.mem.rsp.bits.readData
+  fillQ.io.deq <> ds.io.in
   ocmc.io.mcif.fillPort <> ds.io.out
-  // connect dump port to queue and reducer
+
+  // connect dump port to queue
+  // queue feed the data write port of the req adapter plus a reducer
   val dumpQ = Module(new Queue(UInt(width = p.readWidth), 16))
   val redFxn: (UInt,UInt)=>UInt = {(a,b) => a+b}
   val reducer = Module(new StreamReducer(p.readWidth, 0, redFxn))
   ocmc.io.mcif.dumpPort <> dumpQ.io.enq
-  dumpQ.io.deq <> reducer.io.streamIn
+
+  // add request generator for fetching the fill buffer
+  val reqgen = Module(new ReadReqGen(mp, 0))
+  reqgen.io.ctrl.start := io.startFill
+  reqgen.io.ctrl.throttle := Bool(false)
+  reqgen.io.ctrl.baseAddr := io.baseAddr
+  reqgen.io.ctrl.byteCount := UInt(p.bits/8)
+  // interleaver for mixing r/w requests
+  val ilv = Module(new ReqInterleaver(2, mp))
+  ilv.io.reqIn(0) <> reqgen.io.reqs
+  ilv.io.reqIn(1) <> wrqgen.io.reqs
+  // connect to mem port with adapter
+  val routeWrites = {x: UInt => (x-UInt(1))}
+  val reqadp = Module(new ConveyMemReqAdp(mp, 1, routeWrites))
+  reqadp.io.genericReqIn <> ilv.io.reqOut
+  reqadp.io.writeData(0) <> dumpQ.io.deq
+  reqadp.io.conveyReqOut <> io.mem.req
+
+  // reducer only moves forward when dump writes move forward
+  reducer.io.streamIn.valid := dumpQ.io.deq.valid & reqadp.io.writeData(0).ready
+  reducer.io.streamIn.bits := dumpQ.io.deq.bits
   reducer.io.byteCount := UInt(p.bits/8)
   reducer.io.start := io.startDump
   // connect dump sum register directly to reducer
   io.dumpSum := reducer.io.reduced
 
-  // add request generator for fetching the fill buffer
-  val reqgen = Module(new ReadReqGen(ConveyMemParams(), 0))
-  reqgen.io.ctrl.start := io.startFill
-  reqgen.io.ctrl.throttle := Bool(false)
-  reqgen.io.ctrl.baseAddr := io.baseAddr
-  reqgen.io.ctrl.byteCount := UInt(p.bits/8)
-  // connect to mem port with adapter
-  val reqadp = Module(new ConveyMemReadReqAdp(ConveyMemParams()))
-  reqadp.io.genericReqIn <> reqgen.io.reqs
-  reqadp.io.conveyReqOut <> io.mem.req
-
   val fillDone = (io.startFill & ocmc.io.mcif.done)
-  val dumpDone = (io.startDump & reducer.io.finished)
+  val dumpDone = (io.startDump & wrqgen.io.stat.finished)
   io.done := fillDone | dumpDone
 
   io.mem.flushReq := Bool(false)
@@ -100,6 +133,7 @@ class BRAMTest(numPipes: Int) extends Personality(numPipes) {
     pipes(i).startFill := regAllStartFill
     pipes(i).startDump := regAllStartDump
     pipes(i).baseAddr := regFile.io.regOut( regindFillPtr(i) )
+    pipes(i).dumpBaseAddr := regFile.io.regOut( regindDumpPtr(i) )
     regFile.io.regIn( regindDumpSum(i) ).bits := pipes(i).dumpSum
     regFile.io.regIn( regindDumpSum(i) ).valid := pipes(i).done
   }
