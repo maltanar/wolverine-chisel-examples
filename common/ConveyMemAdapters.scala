@@ -2,14 +2,12 @@ import Chisel._
 import ConveyInterfaces._
 import TidbitsDMA._
 
-class ConveyMemReqAdp(p: MemReqParams, numWriteChans: Int) extends Module {
+class ConveyMemReqAdp(p: MemReqParams, numWriteChans: Int, routeFxn: UInt => UInt) extends Module {
   val io = new Bundle {
     val genericReqIn = Decoupled(new GenericMemoryRequest(p)).flip
     val conveyReqOut = Decoupled(new MemRequest(32, 48, 64))
-    val writeData = Vec.fill(numWriteChans) {Decoupled(UInt(width = p.dataWidth).flip)}
+    val writeData = Vec.fill(numWriteChans) {Decoupled(UInt(width = p.dataWidth)).flip}
   }
-  // change this to override routing function
-  val routeFxn = {x: UInt => x}
   if(p.dataWidth != 64) {
     println("ConveyMemReqAdp requires p.dataWidth=64")
     System.exit(-1)
