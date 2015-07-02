@@ -49,7 +49,7 @@ class BRAMTestPipe(p: OCMParameters) extends Module {
   reqgen.io.ctrl.baseAddr := io.baseAddr
   reqgen.io.ctrl.byteCount := UInt(p.bits/8)
   // connect to mem port with adapter
-  val reqadp = Module(new ConveyMemReqAdp(ConveyMemParams()))
+  val reqadp = Module(new ConveyMemReadReqAdp(ConveyMemParams()))
   reqadp.io.genericReqIn <> reqgen.io.reqs
   reqadp.io.conveyReqOut <> io.mem.req
 

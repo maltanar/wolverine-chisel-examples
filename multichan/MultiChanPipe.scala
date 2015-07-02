@@ -51,7 +51,7 @@ class MultiChanPipe(p: MemReqParams, chans: Int) extends Module {
   io.done := reducers.forall(rg => rg.finished)
 
   // install req adapter between interleaver and memory port
-  val adpReq = Module(new ConveyMemReqAdp(p))
+  val adpReq = Module(new ConveyMemReadReqAdp(p))
   adpReq.io.genericReqIn <> intl.io.reqOut
   adpReq.io.conveyReqOut <> io.mem.req
 
