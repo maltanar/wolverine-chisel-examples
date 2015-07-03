@@ -17,7 +17,6 @@ class ConveyMemReqAdp(p: MemReqParams, numWriteChans: Int, routeFxn: UInt => UIn
   io.genericReqIn.ready := Bool(false)
   io.conveyReqOut.valid := Bool(false)
   io.conveyReqOut.bits.rtnCtl := io.genericReqIn.bits.channelID
-  io.conveyReqOut.bits.writeData := UInt(0)
   io.conveyReqOut.bits.addr := io.genericReqIn.bits.addr
   io.conveyReqOut.bits.size := UInt( log2Up(p.dataWidth/8) )
   // TODO scmd needs to be set for write bursts
@@ -31,6 +30,7 @@ class ConveyMemReqAdp(p: MemReqParams, numWriteChans: Int, routeFxn: UInt => UIn
   // write must have both request and data ready
   val src = routeFxn(io.genericReqIn.bits.channelID)
   val validWrite = io.genericReqIn.valid & io.writeData(src).valid
+  io.conveyReqOut.bits.writeData := io.writeData(src).bits
 
   when (validWrite && io.genericReqIn.bits.isWrite) {
     // write request
