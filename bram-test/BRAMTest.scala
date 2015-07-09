@@ -20,9 +20,9 @@ class BRAMTestPipe(p: OCMParameters) extends Module {
 
   val ocmc = Module(new OCMAndController(p, "ResultBRAM", true))
   // TODO make OCM user ports part of the test -- plugged to zero for now
-  ocmc.io.ocmUser.req.addr := UInt(0)
-  ocmc.io.ocmUser.req.writeData := UInt(0)
-  ocmc.io.ocmUser.req.writeEn := Bool(false)
+  for(i <- 0 until 2) {
+    ocmc.io.ocmUser(i).req := NullOCMRequest(p)
+  }
 
   ocmc.io.mcif.mode := Mux(io.startDump, UInt(1), UInt(0))
   ocmc.io.mcif.start := io.startFill | io.startDump
@@ -38,7 +38,7 @@ class BRAMTestPipe(p: OCMParameters) extends Module {
 
   // instantiate response adapter and deinterleaver
   val rspad = Module(new ConveyMemRspAdp(mp))
-  val deint = Module(new RespDeinterleaver(2, mp))
+  val deint = Module(new QueuedDeinterleaver(2, mp, 4))
   rspad.io.conveyRspIn <> io.mem.rsp
   rspad.io.genericRspOut <> deint.io.rspIn
   // just consume all write responses (to channel 1)
